@@ -1,0 +1,28 @@
+# Build artifacts
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+
+# Crash dumps
+erl_crash.dump
+
+# Compiled files
+*.ez
+*.beam
+
+# Secrets
+/config/*.secret.exs
+.env
+
+# IDE
+.elixir_ls/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Release artifacts
+/rel/overlays/

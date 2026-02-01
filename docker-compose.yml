@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - uncomment if you add Ecto later
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: counter_dev
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Application (for testing prod build locally)
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      SECRET_KEY_BASE: "dev_secret_key_base_at_least_64_bytes_long_for_development_only_testing"
+      PHX_HOST: localhost
+      PORT: "4000"
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173"
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+# volumes:
+#   postgres_data:
