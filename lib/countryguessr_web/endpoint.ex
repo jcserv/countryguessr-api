@@ -1,8 +1,8 @@
-defmodule CounterWeb.Endpoint do
-  use Phoenix.Endpoint, otp_app: :counter
+defmodule CountryguessrWeb.Endpoint do
+  use Phoenix.Endpoint, otp_app: :countryguessr
 
   # WebSocket for Phoenix Channels
-  socket "/socket", CounterWeb.UserSocket,
+  socket "/socket", CountryguessrWeb.UserSocket,
     websocket: true,
     longpoll: false
 
@@ -21,6 +21,9 @@ defmodule CounterWeb.Endpoint do
   # CORS - configure allowed origins in config
   plug CORSPlug
 
+  # Rate limiting - protect against abuse
+  plug CountryguessrWeb.Plugs.RateLimiter
+
   # Route to router
-  plug CounterWeb.Router
+  plug CountryguessrWeb.Router
 end

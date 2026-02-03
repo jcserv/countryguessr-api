@@ -1,4 +1,4 @@
-defmodule CounterWeb.HealthController do
+defmodule CountryguessrWeb.HealthController do
   use Phoenix.Controller, formats: [:json]
 
   @doc """

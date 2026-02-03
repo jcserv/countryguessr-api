@@ -66,8 +66,10 @@ ENV ERL_AFLAGS="-proto_dist inet6_tcp"
 ENV ECTO_IPV6="true"
 
 # Copy release from builder
-COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/counter ./
+COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/countryguessr ./
 
 USER nobody
 
-CMD ["/app/bin/server"]
+# Start the Phoenix server
+ENV PHX_SERVER=true
+CMD ["/app/bin/countryguessr", "start"]

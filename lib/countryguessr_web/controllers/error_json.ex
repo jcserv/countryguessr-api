@@ -1,4 +1,4 @@
-defmodule CounterWeb.ErrorJSON do
+defmodule CountryguessrWeb.ErrorJSON do
   @moduledoc """
   JSON error responses.
   """

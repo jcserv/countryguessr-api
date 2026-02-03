@@ -1,9 +1,9 @@
-defmodule Counter.MixProject do
+defmodule Countryguessr.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :counter,
+      app: :countryguessr,
       version: "0.1.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -15,7 +15,7 @@ defmodule Counter.MixProject do
 
   def application do
     [
-      mod: {Counter.Application, []},
+      mod: {Countryguessr.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -31,6 +31,7 @@ defmodule Counter.MixProject do
       {:bandit, "~> 1.5"},
       {:dns_cluster, "~> 0.1.1"},
       {:cors_plug, "~> 3.0"},
+      {:hammer, "~> 6.2"},
 
       # Dev/Test
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}

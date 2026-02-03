@@ -1,16 +1,16 @@
-defmodule CounterWeb.CounterChannelTest do
-  use CounterWeb.ChannelCase
+defmodule CountryguessrWeb.GameChannelTest do
+  use CountryguessrWeb.ChannelCase
 
-  # Use unique counter ID per test to avoid state pollution
+  # Use unique game ID per test to avoid state pollution
   setup do
-    counter_id = "test-#{System.unique_integer([:positive])}"
+    game_id = "test-#{System.unique_integer([:positive])}"
 
     {:ok, _, socket} =
-      CounterWeb.UserSocket
+      CountryguessrWeb.UserSocket
       |> socket("user_id", %{player_id: "test-player"})
-      |> subscribe_and_join(CounterWeb.CounterChannel, "counter:#{counter_id}")
+      |> subscribe_and_join(CountryguessrWeb.GameChannel, "game:#{game_id}")
 
-    %{socket: socket, counter_id: counter_id}
+    %{socket: socket, game_id: game_id}
   end
 
   describe "join" do
@@ -21,7 +21,7 @@ defmodule CounterWeb.CounterChannelTest do
   end
 
   describe "increment" do
-    test "increments counter and broadcasts update", %{socket: socket} do
+    test "increments game and broadcasts update", %{socket: socket} do
       ref = push(socket, "increment", %{})
       assert_reply ref, :ok, %{value: 1}
       assert_push "updated", %{value: 1}
@@ -29,7 +29,7 @@ defmodule CounterWeb.CounterChannelTest do
   end
 
   describe "reset" do
-    test "resets counter and broadcasts update", %{socket: socket} do
+    test "resets game and broadcasts update", %{socket: socket} do
       ref = push(socket, "increment", %{})
       assert_reply ref, :ok, %{value: 1}
 

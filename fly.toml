@@ -1,13 +1,17 @@
 # Fly.io configuration
 # Run `fly launch` to initialize, then `fly deploy` to deploy
 
-app = "counter-api"
-primary_region = "sjc"
+app = "countryguessr-api"
+primary_region = "yyz"
 
 [build]
 
+[processes]
+  app = "/app/bin/countryguessr start"
+
 [env]
-  PHX_HOST = "counter-api.fly.dev"
+  PHX_SERVER = "true"
+  PHX_HOST = "countryguessr-api.fly.dev"
   PORT = "8080"
 
 [http_service]

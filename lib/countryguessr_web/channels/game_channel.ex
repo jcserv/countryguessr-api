@@ -1,45 +1,47 @@
-defmodule CounterWeb.CounterChannel do
+defmodule CountryguessrWeb.GameChannel do
   use Phoenix.Channel
 
   @moduledoc """
-  WebSocket channel for real-time counter updates.
+  WebSocket channel for real-time game updates.
 
-  Demonstrates how WebSocket transport calls the Counter context.
-  The same Counter context is also called by HTTP controllers.
+  Demonstrates how WebSocket transport calls the Game context.
+  The same Game context is also called by HTTP controllers.
 
   ## Topic
 
-  Join with topic `counter:{id}` where `{id}` is the counter ID.
+  Join with topic `game:{id}` where `{id}` is the game ID.
 
   ## Events
 
   ### Client → Server
 
-  - `"increment"` - Increment the counter
-  - `"decrement"` - Decrement the counter
-  - `"reset"` - Reset the counter to 0
+  - `"increment"` - Increment the game
+  - `"decrement"` - Decrement the game
+  - `"reset"` - Reset the game to 0
 
   ### Server → Client
 
   - `"state"` - Sent on join with current value
-  - `"updated"` - Broadcast when counter changes
+  - `"updated"` - Broadcast when game changes
   """
+
+  alias Countryguessr.Game
 
   require Logger
 
   @impl true
-  def join("counter:" <> counter_id, _params, socket) do
-    # Subscribe to counter updates via PubSub
-    Counter.subscribe(counter_id)
+  def join("game:" <> game_id, _params, socket) do
+    # Subscribe to game updates via PubSub
+    Game.subscribe(game_id)
 
-    # Get current value (or 0 if counter doesn't exist)
+    # Get current value (or 0 if game doesn't exist)
     value =
-      case Counter.get(counter_id) do
+      case Game.get(game_id) do
         {:ok, v} -> v
         {:error, :not_found} -> 0
       end
 
-    socket = assign(socket, :counter_id, counter_id)
+    socket = assign(socket, :game_id, game_id)
 
     # Send current state to joining client
     send(self(), :after_join)
@@ -54,7 +56,7 @@ defmodule CounterWeb.CounterChannel do
   end
 
   @impl true
-  def handle_info({:counter_updated, _counter_id, value}, socket) do
+  def handle_info({:game_updated, _game_id, value}, socket) do
     # Forward PubSub updates to the client
     push(socket, "updated", %{value: value})
     {:noreply, socket}
@@ -62,20 +64,20 @@ defmodule CounterWeb.CounterChannel do
 
   @impl true
   def handle_in("increment", _params, socket) do
-    {:ok, value} = Counter.increment(socket.assigns.counter_id)
+    {:ok, value} = Game.increment(socket.assigns.game_id)
     # Update is broadcast via PubSub, no need to broadcast here
     {:reply, {:ok, %{value: value}}, socket}
   end
 
   @impl true
   def handle_in("decrement", _params, socket) do
-    {:ok, value} = Counter.decrement(socket.assigns.counter_id)
+    {:ok, value} = Game.decrement(socket.assigns.game_id)
     {:reply, {:ok, %{value: value}}, socket}
   end
 
   @impl true
   def handle_in("reset", _params, socket) do
-    {:ok, value} = Counter.reset(socket.assigns.counter_id)
+    {:ok, value} = Game.reset(socket.assigns.game_id)
     {:reply, {:ok, %{value: value}}, socket}
   end
 end

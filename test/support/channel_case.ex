@@ -1,4 +1,4 @@
-defmodule CounterWeb.ChannelCase do
+defmodule CountryguessrWeb.ChannelCase do
   @moduledoc """
   Test case for channel tests.
   """
@@ -8,9 +8,9 @@ defmodule CounterWeb.ChannelCase do
   using do
     quote do
       import Phoenix.ChannelTest
-      import CounterWeb.ChannelCase
+      import CountryguessrWeb.ChannelCase
 
-      @endpoint CounterWeb.Endpoint
+      @endpoint CountryguessrWeb.Endpoint
     end
   end
 

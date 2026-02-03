@@ -1,16 +1,16 @@
-defmodule Counter.CounterServer do
+defmodule Countryguessr.GameServer do
   @moduledoc """
-  GenServer that holds the state for a single counter.
+  GenServer that holds the state for a single game.
 
-  Each counter is a separate process, allowing:
-  - Concurrent access to different counters
-  - Isolation (one counter crashing doesn't affect others)
+  Each game is a separate process, allowing:
+  - Concurrent access to different games
+  - Isolation (one game crashing doesn't affect others)
   - Easy horizontal scaling across nodes
 
   ## Process Registration
 
-  Counter processes are registered in `Counter.Registry` using their
-  counter_id, allowing lookup via `whereis/1`.
+  Game processes are registered in `Countryguessr.Registry` using their
+  game_id, allowing lookup via `whereis/1`.
   """
   use GenServer
 
@@ -21,27 +21,27 @@ defmodule Counter.CounterServer do
   # --- Client API ---
 
   @doc """
-  Starts a new counter process.
+  Starts a new game process.
   """
   def start_link(opts) do
-    counter_id = Keyword.fetch!(opts, :counter_id)
-    GenServer.start_link(__MODULE__, opts, name: via_tuple(counter_id))
+    game_id = Keyword.fetch!(opts, :game_id)
+    GenServer.start_link(__MODULE__, opts, name: via_tuple(game_id))
   end
 
   @doc """
-  Looks up a counter process by ID.
+  Looks up a game process by ID.
   Returns the pid if found, nil otherwise.
   """
   @spec whereis(String.t()) :: pid() | nil
-  def whereis(counter_id) do
-    case Registry.lookup(Counter.Registry, counter_id) do
+  def whereis(game_id) do
+    case Registry.lookup(Countryguessr.Registry, game_id) do
       [{pid, _}] -> pid
       [] -> nil
     end
   end
 
   @doc """
-  Gets the current counter value.
+  Gets the current game value.
   """
   @spec get(pid()) :: integer()
   def get(pid) do
@@ -49,7 +49,7 @@ defmodule Counter.CounterServer do
   end
 
   @doc """
-  Increments the counter and returns the new value.
+  Increments the game and returns the new value.
   """
   @spec increment(pid()) :: integer()
   def increment(pid) do
@@ -57,7 +57,7 @@ defmodule Counter.CounterServer do
   end
 
   @doc """
-  Decrements the counter and returns the new value.
+  Decrements the game and returns the new value.
   """
   @spec decrement(pid()) :: integer()
   def decrement(pid) do
@@ -65,7 +65,7 @@ defmodule Counter.CounterServer do
   end
 
   @doc """
-  Resets the counter to 0 and returns 0.
+  Resets the game to 0 and returns 0.
   """
   @spec reset(pid()) :: integer()
   def reset(pid) do
@@ -76,11 +76,11 @@ defmodule Counter.CounterServer do
 
   @impl true
   def init(opts) do
-    counter_id = Keyword.fetch!(opts, :counter_id)
-    Logger.info("Starting counter process", counter_id: counter_id)
+    game_id = Keyword.fetch!(opts, :game_id)
+    Logger.info("Starting game process", game_id: game_id)
 
     state = %{
-      counter_id: counter_id,
+      game_id: game_id,
       value: 0
     }
 
@@ -96,7 +96,7 @@ defmodule Counter.CounterServer do
   def handle_call(:increment, _from, state) do
     new_value = state.value + 1
     new_state = %{state | value: new_value}
-    broadcast_update(state.counter_id, new_value)
+    broadcast_update(state.game_id, new_value)
     {:reply, new_value, new_state, @idle_timeout}
   end
 
@@ -104,34 +104,34 @@ defmodule Counter.CounterServer do
   def handle_call(:decrement, _from, state) do
     new_value = state.value - 1
     new_state = %{state | value: new_value}
-    broadcast_update(state.counter_id, new_value)
+    broadcast_update(state.game_id, new_value)
     {:reply, new_value, new_state, @idle_timeout}
   end
 
   @impl true
   def handle_call(:reset, _from, state) do
     new_state = %{state | value: 0}
-    broadcast_update(state.counter_id, 0)
+    broadcast_update(state.game_id, 0)
     {:reply, 0, new_state, @idle_timeout}
   end
 
   @impl true
   def handle_info(:timeout, state) do
-    Logger.info("Counter idle timeout, shutting down", counter_id: state.counter_id)
+    Logger.info("Game idle timeout, shutting down", game_id: state.game_id)
     {:stop, :normal, state}
   end
 
   # --- Private ---
 
-  defp via_tuple(counter_id) do
-    {:via, Registry, {Counter.Registry, counter_id}}
+  defp via_tuple(game_id) do
+    {:via, Registry, {Countryguessr.Registry, game_id}}
   end
 
-  defp broadcast_update(counter_id, value) do
+  defp broadcast_update(game_id, value) do
     Phoenix.PubSub.broadcast(
-      Counter.PubSub,
-      "counter:#{counter_id}",
-      {:counter_updated, counter_id, value}
+      Countryguessr.PubSub,
+      "game:#{game_id}",
+      {:game_updated, game_id, value}
     )
   end
 end

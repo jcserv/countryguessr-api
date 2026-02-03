@@ -1,5 +1,5 @@
-defmodule CounterWeb.HealthControllerTest do
-  use CounterWeb.ConnCase
+defmodule CountryguessrWeb.HealthControllerTest do
+  use CountryguessrWeb.ConnCase
 
   describe "GET /health" do
     test "returns ok status", %{conn: conn} do

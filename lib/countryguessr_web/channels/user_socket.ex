@@ -1,4 +1,4 @@
-defmodule CounterWeb.UserSocket do
+defmodule CountryguessrWeb.UserSocket do
   use Phoenix.Socket
 
   @moduledoc """
@@ -18,7 +18,7 @@ defmodule CounterWeb.UserSocket do
   """
 
   # Channels
-  channel "counter:*", CounterWeb.CounterChannel
+  channel "game:*", CountryguessrWeb.GameChannel
 
   @impl true
   def connect(params, socket, _connect_info) do

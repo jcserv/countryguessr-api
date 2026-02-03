@@ -1,4 +1,4 @@
-defmodule CounterWeb.ConnCase do
+defmodule CountryguessrWeb.ConnCase do
   @moduledoc """
   Test case for controller tests.
   """
@@ -9,9 +9,9 @@ defmodule CounterWeb.ConnCase do
     quote do
       import Plug.Conn
       import Phoenix.ConnTest
-      import CounterWeb.ConnCase
+      import CountryguessrWeb.ConnCase
 
-      @endpoint CounterWeb.Endpoint
+      @endpoint CountryguessrWeb.Endpoint
     end
   end
 
