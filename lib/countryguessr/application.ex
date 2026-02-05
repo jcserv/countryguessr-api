@@ -22,6 +22,9 @@ defmodule Countryguessr.Application do
       # PubSub for broadcasting game updates
       {Phoenix.PubSub, name: Countryguessr.PubSub},
 
+      # Rate limiter for WebSocket events
+      Countryguessr.RateLimiter,
+
       # Web endpoint
       CountryguessrWeb.Endpoint
     ]
