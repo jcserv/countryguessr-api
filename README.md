@@ -1,132 +1,26 @@
-# Elixir API Template
+# 🎯 countryguessr-api
 
-Barebones Phoenix API template demonstrating core Elixir/OTP patterns.
+a realtime Phoenix API for multiplayer countryguessr games.
 
-## Patterns Demonstrated
+## features
 
-- **GenServer** - Stateful process (`lib/counter/counter_server.ex`)
-- **Phoenix Channels** - Real-time WebSocket (`lib/counter_web/channels/`)
-- **Transport-agnostic contexts** - Same logic for HTTP and WebSocket (`lib/counter/counter.ex`)
-- **Supervision trees** - Registry + DynamicSupervisor (`lib/counter/application.ex`)
-- **Fly.io deployment** - Dockerfile + clustering config
+- 🕹️ in-memory game rooms managed by a GenServer
+- 🔌 realtime updates over Phoenix Channels (`game:{id}`)
+- 🧭 country code validation aligned with the frontend geojson
+- 🚦 basic rate limiting on gameplay actions
+- ❤️ health endpoint for deploy checks
 
-## Example: Shared Counter
+## dependencies
 
-Multiple clients can connect and increment/view a counter in real-time.
+- [phoenix](https://www.phoenixframework.org/)
+- [bandit](https://github.com/mtrudel/bandit)
+- [phoenix pubsub](https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html)
+- [jason](https://github.com/michalmuskala/jason)
+- [cors_plug](https://github.com/mschae/cors_plug)
+- [hammer](https://github.com/ExHammer/hammer)
+- [dns_cluster](https://github.com/phoenixframework/dns_cluster)
 
-```
-┌─────────┐    HTTP     ┌──────────────┐
-│ Client  │────────────▶│              │
-└─────────┘             │   Counter    │ ◀──▶ CounterServer (GenServer)
-                        │   Context    │
-┌─────────┐  WebSocket  │              │
-│ Client  │────────────▶│              │
-└─────────┘             └──────────────┘
-```
+## references
 
-## Quick Start
-
-```bash
-# Install dependencies
-mix deps.get
-
-# Start development server
-iex -S mix phx.server
-```
-
-## API
-
-### HTTP Endpoints
-
-```bash
-# Health check
-curl localhost:4000/health
-
-# Get counter value
-curl localhost:4000/api/counters/my-counter
-
-# Increment
-curl -X POST localhost:4000/api/counters/my-counter/increment
-
-# Reset
-curl -X POST localhost:4000/api/counters/my-counter/reset
-```
-
-### WebSocket
-
-Connect to `ws://localhost:4000/socket/websocket`
-
-```javascript
-// Using Phoenix.js client
-const socket = new Socket("/socket", { params: { player_id: "uuid" } });
-socket.connect();
-
-const channel = socket.channel("counter:my-counter", {});
-channel.join();
-
-// Increment
-channel.push("increment", {}).receive("ok", ({ value }) => console.log(value));
-
-// Listen for updates
-channel.on("updated", ({ value }) => console.log("Counter:", value));
-```
-
-## Project Structure
-
-```
-lib/
-├── counter/                    # Core logic (transport-agnostic)
-│   ├── application.ex          # Supervision tree
-│   ├── counter.ex              # Context API
-│   └── counter_server.ex       # GenServer
-│
-└── counter_web/                # Web layer
-    ├── endpoint.ex
-    ├── router.ex
-    ├── controllers/            # HTTP
-    └── channels/               # WebSocket
-```
-
-## Commands
-
-```bash
-make dev          # Start dev server
-make test         # Run tests
-make format       # Format code
-make lint         # Run Credo
-make docker.build # Build Docker image
-make docker.run   # Run container
-```
-
-## Deploy to Fly.io
-
-```bash
-fly launch        # Initialize (first time)
-fly deploy        # Deploy
-fly logs          # View logs
-```
-
-## Adding New Features
-
-### New HTTP Endpoint
-
-1. Add route in `lib/counter_web/router.ex`
-2. Create controller in `lib/counter_web/controllers/`
-3. Call context functions (not business logic in controller)
-
-### New WebSocket Event
-
-1. Add handler in channel (`handle_in/3`)
-2. Call context functions
-3. Broadcast updates via PubSub
-
-### New Context
-
-1. Create module in `lib/counter/` with public API
-2. Create GenServer if stateful
-3. Add to supervision tree in `application.ex`
-4. Call from HTTP controllers and/or channels
-
-## License
-
-GPL-3.0
+- [phoenix channels guide](https://hexdocs.pm/phoenix/channels.html)
+- [fly.io](https://fly.io/)
