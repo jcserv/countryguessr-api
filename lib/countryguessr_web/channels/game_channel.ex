@@ -28,13 +28,11 @@ defmodule CountryguessrWeb.GameChannel do
   - `"updated"` - Legacy counter update
   """
 
+  alias Countryguessr.Countries
   alias Countryguessr.Game
   alias Countryguessr.RateLimiter
 
   require Logger
-
-  # ISO_A2 country code pattern (two uppercase letters)
-  @country_code_pattern ~r/^[A-Z]{2}$/
 
   @impl true
   def join("game:" <> game_id, params, socket) do
@@ -220,7 +218,7 @@ defmodule CountryguessrWeb.GameChannel do
   end
 
   defp validate_country_code(code) when is_binary(code) do
-    if Regex.match?(@country_code_pattern, code) do
+    if Countries.valid?(code) do
       :ok
     else
       {:error, :invalid_country_code}

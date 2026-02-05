@@ -125,7 +125,7 @@ defmodule CountryguessrWeb.GameChannelTest do
     end
 
     test "rejects invalid country code format", %{socket: socket} do
-      # Too long
+      # Invalid code not in list
       ref = push(socket, "claim_country", %{"country_code" => "USA"})
       assert_reply ref, :error, %{reason: :invalid_country_code}
 
@@ -140,6 +140,29 @@ defmodule CountryguessrWeb.GameChannelTest do
       # Empty
       ref = push(socket, "claim_country", %{"country_code" => ""})
       assert_reply ref, :error, %{reason: :invalid_country_code}
+    end
+
+    test "accepts special country codes for disputed territories", %{
+      socket: socket,
+      player_id: player_id
+    } do
+      # Northern Cyprus
+      ref = push(socket, "claim_country", %{"country_code" => "SYN_NORTHERN_CYPRUS"})
+      assert_reply ref, :ok, %{success: true}
+
+      assert_push "country_claimed", %{
+        player_id: ^player_id,
+        country_code: "SYN_NORTHERN_CYPRUS"
+      }
+
+      # Somaliland
+      ref = push(socket, "claim_country", %{"country_code" => "SYN_SOMALILAND"})
+      assert_reply ref, :ok, %{success: true}
+
+      assert_push "country_claimed", %{
+        player_id: ^player_id,
+        country_code: "SYN_SOMALILAND"
+      }
     end
 
     test "rate limits excessive claims", %{socket: socket, player_id: _player_id} do
