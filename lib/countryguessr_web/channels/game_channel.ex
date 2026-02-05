@@ -119,6 +119,17 @@ defmodule CountryguessrWeb.GameChannel do
     {:reply, {:ok, %{value: value}}, socket}
   end
 
+  @impl true
+  def handle_in("end_game", _params, socket) do
+    game_id = socket.assigns.game_id
+    player_id = socket.assigns.player_id
+
+    case Game.end_game(game_id, player_id) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: reason}}, socket}
+    end
+  end
+
   # Catch-all for unknown events
   @impl true
   def handle_in(event, _params, socket) do

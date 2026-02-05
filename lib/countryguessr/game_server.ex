@@ -83,6 +83,13 @@ defmodule Countryguessr.GameServer do
     GenServer.call(pid, {:claim_country, player_id, country_code})
   end
 
+  @doc """
+  Manually ends the game (host only).
+  """
+  def end_game(pid, player_id) do
+    GenServer.call(pid, {:end_game, player_id})
+  end
+
   # --- Legacy API for backwards compatibility ---
 
   @doc """
@@ -266,6 +273,21 @@ defmodule Countryguessr.GameServer do
           end
 
         {:reply, {:ok, %{success: true}}, new_state, @idle_timeout}
+    end
+  end
+
+  @impl true
+  def handle_call({:end_game, player_id}, _from, state) do
+    cond do
+      state.status != :playing ->
+        {:reply, {:error, :game_not_playing}, state, @idle_timeout}
+
+      state.host_id != player_id ->
+        {:reply, {:error, :not_host}, state, @idle_timeout}
+
+      true ->
+        new_state = end_game(state)
+        {:reply, :ok, new_state, @idle_timeout}
     end
   end
 

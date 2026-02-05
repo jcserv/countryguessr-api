@@ -87,6 +87,17 @@ defmodule Countryguessr.Game do
     end
   end
 
+  @doc """
+  Manually ends the game. Only the host can end the game.
+  Returns `:ok` or `{:error, reason}`.
+  """
+  def end_game(game_id, player_id) do
+    case GameServer.whereis(game_id) do
+      nil -> {:error, :not_found}
+      pid -> GameServer.end_game(pid, player_id)
+    end
+  end
+
   # =============================================================================
   # Legacy Counter API (for backwards compatibility)
   # =============================================================================
