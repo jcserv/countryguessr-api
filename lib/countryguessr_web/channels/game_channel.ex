@@ -14,6 +14,7 @@ defmodule CountryguessrWeb.GameChannel do
 
   - `"start_game"` - Start the game (host only)
   - `"claim_country"` - Claim a country `%{"country_code" => "US"}`
+  - `"submit_guess"` - Submit a guess `%{"clicked_country" => "US", "guessed_country" => "FR"}`
   - `"increment"` / `"decrement"` / `"reset"` - Legacy counter API
 
   ### Server → Client
@@ -25,6 +26,8 @@ defmodule CountryguessrWeb.GameChannel do
   - `"country_claimed"` - A country was claimed
   - `"timer_tick"` - Timer update (every second during game)
   - `"game_ended"` - Game has ended with rankings
+  - `"life_lost"` - A player lost a life
+  - `"player_eliminated"` - A player was eliminated
   - `"updated"` - Legacy counter update
   """
 
@@ -120,6 +123,34 @@ defmodule CountryguessrWeb.GameChannel do
   end
 
   @impl true
+  def handle_in(
+        "submit_guess",
+        %{"clicked_country" => clicked, "guessed_country" => guessed},
+        socket
+      ) do
+    game_id = socket.assigns.game_id
+    player_id = socket.assigns.player_id
+
+    with :ok <- validate_country_code(clicked),
+         :ok <- validate_country_code(guessed),
+         :ok <- RateLimiter.check(player_id, :claim_country) do
+      case Game.submit_guess(game_id, player_id, clicked, guessed) do
+        {:ok, result} ->
+          {:reply, {:ok, result}, socket}
+
+        {:error, reason} ->
+          {:reply, {:error, %{reason: reason}}, socket}
+      end
+    else
+      {:error, :invalid_country_code} ->
+        {:reply, {:error, %{reason: :invalid_country_code}}, socket}
+
+      {:error, :rate_limited} ->
+        {:reply, {:error, %{reason: :rate_limited}}, socket}
+    end
+  end
+
+  @impl true
   def handle_in("end_game", _params, socket) do
     game_id = socket.assigns.game_id
     player_id = socket.assigns.player_id
@@ -188,6 +219,22 @@ defmodule CountryguessrWeb.GameChannel do
       rankings: rankings
     })
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:life_lost, player_id, lives_remaining}, socket) do
+    push(socket, "life_lost", %{
+      player_id: player_id,
+      lives_remaining: lives_remaining
+    })
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:player_eliminated, player_id}, socket) do
+    push(socket, "player_eliminated", %{player_id: player_id})
     {:noreply, socket}
   end
 

@@ -197,6 +197,106 @@ defmodule Countryguessr.GameTest do
     end
   end
 
+  describe "competitive game: submit_guess/4" do
+    setup do
+      game_id = "game-#{System.unique_integer()}"
+      host_id = "player-1"
+
+      {:ok, _} = Game.join(game_id, host_id, "Alice")
+      {:ok, _} = Game.join(game_id, "player-2", "Bob")
+      {:ok, _} = Game.start_game(game_id, host_id)
+
+      %{game_id: game_id, host_id: host_id}
+    end
+
+    test "correct guess claims the country", %{game_id: game_id, host_id: host_id} do
+      {:ok, result} = Game.submit_guess(game_id, host_id, "US", "US")
+      assert result.correct == true
+      assert result.success == true
+
+      {:ok, state} = Game.get_state(game_id)
+      assert state.claimed_countries["US"] == host_id
+      assert "US" in state.players[host_id].claimed_countries
+    end
+
+    test "incorrect guess loses a life", %{game_id: game_id, host_id: host_id} do
+      {:ok, result} = Game.submit_guess(game_id, host_id, "US", "FR")
+      assert result.correct == false
+      assert result.lives == 2
+      assert result.is_eliminated == false
+
+      {:ok, state} = Game.get_state(game_id)
+      assert state.players[host_id].lives == 2
+      assert state.players[host_id].is_eliminated == false
+      # Country should NOT be claimed
+      refute Map.has_key?(state.claimed_countries, "US")
+    end
+
+    test "three wrong guesses eliminates player", %{game_id: game_id, host_id: host_id} do
+      {:ok, _} = Game.submit_guess(game_id, host_id, "US", "FR")
+      {:ok, _} = Game.submit_guess(game_id, host_id, "US", "FR")
+      {:ok, result} = Game.submit_guess(game_id, host_id, "US", "FR")
+
+      assert result.correct == false
+      assert result.lives == 0
+      assert result.is_eliminated == true
+
+      {:ok, state} = Game.get_state(game_id)
+      assert state.players[host_id].lives == 0
+      assert state.players[host_id].is_eliminated == true
+    end
+
+    test "eliminated player cannot submit guesses" do
+      # Need 3 players so eliminating one doesn't end the game
+      game_id = "game-#{System.unique_integer()}"
+      host_id = "player-1"
+
+      {:ok, _} = Game.join(game_id, host_id, "Alice")
+      {:ok, _} = Game.join(game_id, "player-2", "Bob")
+      {:ok, _} = Game.join(game_id, "player-3", "Charlie")
+      {:ok, _} = Game.start_game(game_id, host_id)
+
+      # Eliminate player-2
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+
+      assert {:error, :player_eliminated} = Game.submit_guess(game_id, "player-2", "US", "US")
+    end
+
+    test "rejects guess for already claimed country", %{game_id: game_id, host_id: host_id} do
+      {:ok, _} = Game.submit_guess(game_id, host_id, "US", "US")
+      assert {:error, :already_claimed} = Game.submit_guess(game_id, "player-2", "US", "US")
+    end
+
+    test "game ends when only 1 player remains", %{game_id: game_id} do
+      # Eliminate player-2 (3 wrong guesses)
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+      {:ok, _} = Game.submit_guess(game_id, "player-2", "US", "FR")
+
+      {:ok, state} = Game.get_state(game_id)
+      assert state.status == :finished
+    end
+
+    test "players start with 3 lives", %{game_id: game_id, host_id: host_id} do
+      {:ok, state} = Game.get_state(game_id)
+      assert state.players[host_id].lives == 3
+      assert state.players[host_id].is_eliminated == false
+    end
+
+    test "rejects guess when game not playing" do
+      game_id = "game-#{System.unique_integer()}"
+      {:ok, _} = Game.join(game_id, "player-1", "Alice")
+
+      assert {:error, :game_not_playing} = Game.submit_guess(game_id, "player-1", "US", "US")
+    end
+
+    test "returns error for non-existent game" do
+      assert {:error, :not_found} = Game.submit_guess("nonexistent", "player-1", "US", "US")
+    end
+  end
+
   describe "competitive game: get_state/1" do
     test "returns game state" do
       game_id = "game-#{System.unique_integer()}"

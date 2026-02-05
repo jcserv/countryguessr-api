@@ -88,6 +88,18 @@ defmodule Countryguessr.Game do
   end
 
   @doc """
+  Submits a guess for a country. Handles both correct and incorrect guesses.
+  On correct guess, claims the country. On incorrect guess, player loses a life.
+  Returns `{:ok, result}` or `{:error, reason}`.
+  """
+  def submit_guess(game_id, player_id, clicked_country, guessed_country) do
+    case GameServer.whereis(game_id) do
+      nil -> {:error, :not_found}
+      pid -> GameServer.submit_guess(pid, player_id, clicked_country, guessed_country)
+    end
+  end
+
+  @doc """
   Manually ends the game. Only the host can end the game.
   Returns `:ok` or `{:error, reason}`.
   """
@@ -159,6 +171,8 @@ defmodule Countryguessr.Game do
   - `{:country_claimed, player_id, country_code}` - Country claimed
   - `{:timer_tick, time_remaining}` - Timer update
   - `{:game_ended, ended_at, winner_id, rankings}` - Game ended
+  - `{:life_lost, player_id, lives_remaining}` - Player lost a life
+  - `{:player_eliminated, player_id}` - Player eliminated (0 lives)
   """
   @spec subscribe(String.t()) :: :ok
   def subscribe(game_id) do

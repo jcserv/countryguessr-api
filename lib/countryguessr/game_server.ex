@@ -25,6 +25,7 @@ defmodule Countryguessr.GameServer do
   @game_duration :timer.minutes(30)
   @timer_interval :timer.seconds(1)
   @total_countries 178
+  @initial_lives 3
 
   # --- Client API ---
 
@@ -81,6 +82,19 @@ defmodule Countryguessr.GameServer do
   """
   def claim_country(pid, player_id, country_code) do
     GenServer.call(pid, {:claim_country, player_id, country_code})
+  end
+
+  @doc """
+  Submits a guess for a country. Handles both correct and incorrect guesses.
+  Returns {:ok, result} or {:error, reason}.
+
+  Result includes:
+  - :correct - whether the guess was correct
+  - :lives - remaining lives (if incorrect)
+  - :is_eliminated - whether player was eliminated
+  """
+  def submit_guess(pid, player_id, clicked_country, guessed_country) do
+    GenServer.call(pid, {:submit_guess, player_id, clicked_country, guessed_country})
   end
 
   @doc """
@@ -183,7 +197,9 @@ defmodule Countryguessr.GameServer do
           nickname: nickname,
           claimed_countries: [],
           is_host: is_host,
-          is_connected: true
+          is_connected: true,
+          lives: @initial_lives,
+          is_eliminated: false
         }
 
         new_players = Map.put(state.players, player_id, player)
@@ -257,7 +273,12 @@ defmodule Countryguessr.GameServer do
 
         # Update player's claimed countries list
         player = state.players[player_id]
-        updated_player = %{player | claimed_countries: [country_code | player.claimed_countries]}
+
+        updated_player = %{
+          player
+          | claimed_countries: [country_code | player.claimed_countries]
+        }
+
         new_players = Map.put(state.players, player_id, updated_player)
 
         new_state = %{state | claimed_countries: new_claimed, players: new_players}
@@ -267,12 +288,81 @@ defmodule Countryguessr.GameServer do
         # Check if all countries are claimed
         new_state =
           if map_size(new_claimed) >= @total_countries do
-            end_game(new_state)
+            do_end_game(new_state)
           else
             new_state
           end
 
         {:reply, {:ok, %{success: true}}, new_state, @idle_timeout}
+    end
+  end
+
+  @impl true
+  def handle_call(
+        {:submit_guess, player_id, clicked_country, guessed_country},
+        _from,
+        state
+      ) do
+    cond do
+      state.status != :playing ->
+        {:reply, {:error, :game_not_playing}, state, @idle_timeout}
+
+      not Map.has_key?(state.players, player_id) ->
+        {:reply, {:error, :not_in_game}, state, @idle_timeout}
+
+      state.players[player_id].is_eliminated ->
+        {:reply, {:error, :player_eliminated}, state, @idle_timeout}
+
+      Map.has_key?(state.claimed_countries, clicked_country) ->
+        {:reply, {:error, :already_claimed}, state, @idle_timeout}
+
+      guessed_country == clicked_country ->
+        # Correct guess - claim the country
+        new_claimed = Map.put(state.claimed_countries, clicked_country, player_id)
+
+        player = state.players[player_id]
+
+        updated_player = %{
+          player
+          | claimed_countries: [clicked_country | player.claimed_countries]
+        }
+
+        new_players = Map.put(state.players, player_id, updated_player)
+
+        new_state = %{state | claimed_countries: new_claimed, players: new_players}
+
+        broadcast_country_claimed(state.game_id, player_id, clicked_country)
+
+        # Check if all countries are claimed
+        new_state =
+          if map_size(new_claimed) >= @total_countries do
+            do_end_game(new_state)
+          else
+            new_state
+          end
+
+        {:reply, {:ok, %{correct: true, success: true}}, new_state, @idle_timeout}
+
+      true ->
+        # Incorrect guess - lose a life
+        {new_state, lives_remaining, is_eliminated} = lose_life(state, player_id)
+
+        broadcast_life_lost(state.game_id, player_id, lives_remaining)
+
+        if is_eliminated do
+          broadcast_player_eliminated(state.game_id, player_id)
+        end
+
+        # Check if game should end (only 1 non-eliminated player remains)
+        new_state = maybe_end_game_by_elimination(new_state)
+
+        result = %{
+          correct: false,
+          lives: lives_remaining,
+          is_eliminated: is_eliminated
+        }
+
+        {:reply, {:ok, result}, new_state, @idle_timeout}
     end
   end
 
@@ -286,7 +376,7 @@ defmodule Countryguessr.GameServer do
         {:reply, {:error, :not_host}, state, @idle_timeout}
 
       true ->
-        new_state = end_game(state)
+        new_state = do_end_game(state)
         {:reply, :ok, new_state, @idle_timeout}
     end
   end
@@ -329,7 +419,7 @@ defmodule Countryguessr.GameServer do
       new_time = state.time_remaining - 1
 
       if new_time <= 0 do
-        new_state = end_game(%{state | time_remaining: 0, timer_ref: nil})
+        new_state = do_end_game(%{state | time_remaining: 0, timer_ref: nil})
         {:noreply, new_state, @idle_timeout}
       else
         broadcast_timer_tick(state.game_id, new_time)
@@ -377,12 +467,14 @@ defmodule Countryguessr.GameServer do
          nickname: player.nickname,
          claimed_countries: player.claimed_countries,
          is_host: player.is_host,
-         is_connected: player.is_connected
+         is_connected: player.is_connected,
+         lives: player.lives,
+         is_eliminated: player.is_eliminated
        }}
     end)
   end
 
-  defp end_game(state) do
+  defp do_end_game(state) do
     # Cancel timer if running
     if state.timer_ref, do: Process.cancel_timer(state.timer_ref)
 
@@ -403,10 +495,38 @@ defmodule Countryguessr.GameServer do
       %{
         player_id: id,
         nickname: player.nickname,
-        claimed_count: length(player.claimed_countries)
+        claimed_count: length(player.claimed_countries),
+        lives_remaining: player.lives,
+        is_eliminated: player.is_eliminated
       }
     end)
-    |> Enum.sort_by(& &1.claimed_count, :desc)
+    |> Enum.sort_by(fn r ->
+      {if(r.is_eliminated, do: 1, else: 0), -r.claimed_count}
+    end)
+  end
+
+  defp lose_life(state, player_id) do
+    player = state.players[player_id]
+    new_lives = max(player.lives - 1, 0)
+    is_eliminated = new_lives == 0
+
+    updated_player = %{player | lives: new_lives, is_eliminated: is_eliminated}
+    new_players = Map.put(state.players, player_id, updated_player)
+    new_state = %{state | players: new_players}
+
+    {new_state, new_lives, is_eliminated}
+  end
+
+  defp maybe_end_game_by_elimination(state) do
+    active_players =
+      state.players
+      |> Enum.count(fn {_id, player} -> not player.is_eliminated end)
+
+    if active_players <= 1 and map_size(state.players) > 1 do
+      do_end_game(state)
+    else
+      state
+    end
   end
 
   # --- Broadcasts ---
@@ -464,6 +584,22 @@ defmodule Countryguessr.GameServer do
       Countryguessr.PubSub,
       "game:#{game_id}",
       {:game_ended, ended_at, winner_id, rankings}
+    )
+  end
+
+  defp broadcast_life_lost(game_id, player_id, lives_remaining) do
+    Phoenix.PubSub.broadcast(
+      Countryguessr.PubSub,
+      "game:#{game_id}",
+      {:life_lost, player_id, lives_remaining}
+    )
+  end
+
+  defp broadcast_player_eliminated(game_id, player_id) do
+    Phoenix.PubSub.broadcast(
+      Countryguessr.PubSub,
+      "game:#{game_id}",
+      {:player_eliminated, player_id}
     )
   end
 

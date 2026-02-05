@@ -180,6 +180,119 @@ defmodule CountryguessrWeb.GameChannelTest do
     end
   end
 
+  describe "submit_guess" do
+    setup %{socket: socket} do
+      # Start the game first
+      ref = push(socket, "start_game", %{})
+      assert_reply ref, :ok
+      assert_push "game_started", _
+
+      :ok
+    end
+
+    test "correct guess claims country", %{socket: socket, player_id: player_id} do
+      ref = push(socket, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "US"})
+      assert_reply ref, :ok, %{correct: true, success: true}
+
+      assert_push "country_claimed", %{
+        player_id: ^player_id,
+        country_code: "US"
+      }
+    end
+
+    test "incorrect guess loses a life and broadcasts", %{socket: socket, player_id: player_id} do
+      ref = push(socket, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "FR"})
+      assert_reply ref, :ok, %{correct: false, lives: 2, is_eliminated: false}
+
+      assert_push "life_lost", %{
+        player_id: ^player_id,
+        lives_remaining: 2
+      }
+    end
+
+    test "three wrong guesses eliminates player", %{socket: socket, player_id: player_id} do
+      ref = push(socket, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "FR"})
+      assert_reply ref, :ok, %{correct: false, lives: 2}
+      assert_push "life_lost", _
+
+      ref = push(socket, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "FR"})
+      assert_reply ref, :ok, %{correct: false, lives: 1}
+      assert_push "life_lost", _
+
+      ref = push(socket, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "FR"})
+      assert_reply ref, :ok, %{correct: false, lives: 0, is_eliminated: true}
+
+      assert_push "life_lost", %{
+        player_id: ^player_id,
+        lives_remaining: 0
+      }
+
+      assert_push "player_eliminated", %{
+        player_id: ^player_id
+      }
+    end
+
+    test "eliminated player cannot guess" do
+      # Need 3 players so eliminating one doesn't end the game
+      new_game_id = "test-#{System.unique_integer([:positive])}"
+      player1_id = "player-1-#{System.unique_integer([:positive])}"
+      player2_id = "player-2-#{System.unique_integer([:positive])}"
+      player3_id = "player-3-#{System.unique_integer([:positive])}"
+
+      {:ok, _, socket1} =
+        CountryguessrWeb.UserSocket
+        |> socket("user_id", %{player_id: player1_id})
+        |> subscribe_and_join(
+          CountryguessrWeb.GameChannel,
+          "game:#{new_game_id}",
+          %{"nickname" => "Player1", "player_id" => player1_id}
+        )
+
+      {:ok, _, _socket2} =
+        CountryguessrWeb.UserSocket
+        |> socket("user_id", %{player_id: player2_id})
+        |> subscribe_and_join(
+          CountryguessrWeb.GameChannel,
+          "game:#{new_game_id}",
+          %{"nickname" => "Player2", "player_id" => player2_id}
+        )
+
+      {:ok, _, _socket3} =
+        CountryguessrWeb.UserSocket
+        |> socket("user_id", %{player_id: player3_id})
+        |> subscribe_and_join(
+          CountryguessrWeb.GameChannel,
+          "game:#{new_game_id}",
+          %{"nickname" => "Player3", "player_id" => player3_id}
+        )
+
+      # Start game
+      ref = push(socket1, "start_game", %{})
+      assert_reply ref, :ok
+      assert_push "game_started", _
+
+      # Exhaust player1's lives
+      for _ <- 1..3 do
+        ref =
+          push(socket1, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "FR"})
+
+        assert_reply ref, :ok, _
+        assert_push "life_lost", _
+      end
+
+      # Drain player_eliminated push
+      assert_push "player_eliminated", _
+
+      ref = push(socket1, "submit_guess", %{"clicked_country" => "US", "guessed_country" => "US"})
+      assert_reply ref, :error, %{reason: :player_eliminated}
+    end
+
+    test "rejects invalid country codes", %{socket: socket} do
+      ref = push(socket, "submit_guess", %{"clicked_country" => "USA", "guessed_country" => "FR"})
+      assert_reply ref, :error, %{reason: :invalid_country_code}
+    end
+  end
+
   describe "player_joined broadcast" do
     test "broadcasts when new player joins", %{game_id: game_id} do
       player2_id = "player-2-#{System.unique_integer([:positive])}"
