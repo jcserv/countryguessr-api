@@ -321,31 +321,4 @@ defmodule CountryguessrWeb.GameChannelTest do
     end
   end
 
-  describe "legacy counter API" do
-    test "increments game and broadcasts update", %{socket: socket} do
-      ref = push(socket, "increment", %{})
-      assert_reply ref, :ok, %{value: 1}
-      assert_push "updated", %{value: 1}
-    end
-
-    test "decrements game", %{socket: socket} do
-      ref = push(socket, "increment", %{})
-      assert_reply ref, :ok, %{value: 1}
-
-      ref = push(socket, "decrement", %{})
-      assert_reply ref, :ok, %{value: 0}
-    end
-
-    test "resets game and broadcasts update", %{socket: socket} do
-      ref = push(socket, "increment", %{})
-      assert_reply ref, :ok, %{value: 1}
-
-      ref = push(socket, "increment", %{})
-      assert_reply ref, :ok, %{value: 2}
-
-      ref = push(socket, "reset", %{})
-      assert_reply ref, :ok, %{value: 0}
-      assert_push "updated", %{value: 0}
-    end
-  end
 end
