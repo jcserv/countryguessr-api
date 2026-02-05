@@ -20,10 +20,6 @@ defmodule Countryguessr.Game do
       Countryguessr.Game.claim_country("room-ABC123", "player-1", "US")
       #=> {:ok, %{success: true}}
 
-  ## Legacy Counter Example
-
-      Countryguessr.Game.increment("my-game")
-      #=> {:ok, 1}
   """
 
   alias Countryguessr.GameServer
@@ -111,52 +107,6 @@ defmodule Countryguessr.Game do
   end
 
   # =============================================================================
-  # Legacy Counter API (for backwards compatibility)
-  # =============================================================================
-
-  @doc """
-  Gets the current value of a game.
-  Returns `{:ok, value}` or `{:error, :not_found}`.
-  """
-  @spec get(String.t()) :: {:ok, integer()} | {:error, :not_found}
-  def get(game_id) do
-    case GameServer.whereis(game_id) do
-      nil -> {:error, :not_found}
-      pid -> {:ok, GameServer.get(pid)}
-    end
-  end
-
-  @doc """
-  Increments a game by 1. Creates the game if it doesn't exist.
-  Returns `{:ok, new_value}`.
-  """
-  @spec increment(String.t()) :: {:ok, integer()}
-  def increment(game_id) do
-    pid = ensure_started(game_id)
-    {:ok, GameServer.increment(pid)}
-  end
-
-  @doc """
-  Decrements a game by 1. Creates the game if it doesn't exist.
-  Returns `{:ok, new_value}`.
-  """
-  @spec decrement(String.t()) :: {:ok, integer()}
-  def decrement(game_id) do
-    pid = ensure_started(game_id)
-    {:ok, GameServer.decrement(pid)}
-  end
-
-  @doc """
-  Resets a game to 0. Creates the game if it doesn't exist.
-  Returns `{:ok, 0}`.
-  """
-  @spec reset(String.t()) :: {:ok, integer()}
-  def reset(game_id) do
-    pid = ensure_started(game_id)
-    {:ok, GameServer.reset(pid)}
-  end
-
-  # =============================================================================
   # PubSub
   # =============================================================================
 
@@ -164,7 +114,6 @@ defmodule Countryguessr.Game do
   Subscribes the calling process to game updates.
 
   Updates are sent as tuples:
-  - `{:game_updated, game_id, value}` - Legacy counter update
   - `{:player_joined, player_id, nickname, is_host}` - Player joined
   - `{:player_left, player_id}` - Player disconnected
   - `{:game_started, started_at}` - Game started

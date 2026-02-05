@@ -15,7 +15,6 @@ defmodule CountryguessrWeb.GameChannel do
   - `"start_game"` - Start the game (host only)
   - `"claim_country"` - Claim a country `%{"country_code" => "US"}`
   - `"submit_guess"` - Submit a guess `%{"clicked_country" => "US", "guessed_country" => "FR"}`
-  - `"increment"` / `"decrement"` / `"reset"` - Legacy counter API
 
   ### Server → Client
 
@@ -28,7 +27,6 @@ defmodule CountryguessrWeb.GameChannel do
   - `"game_ended"` - Game has ended with rankings
   - `"life_lost"` - A player lost a life
   - `"player_eliminated"` - A player was eliminated
-  - `"updated"` - Legacy counter update
   """
 
   alias Countryguessr.Countries
@@ -101,25 +99,6 @@ defmodule CountryguessrWeb.GameChannel do
       {:error, :rate_limited} ->
         {:reply, {:error, %{reason: :rate_limited}}, socket}
     end
-  end
-
-  # Legacy counter API
-  @impl true
-  def handle_in("increment", _params, socket) do
-    {:ok, value} = Game.increment(socket.assigns.game_id)
-    {:reply, {:ok, %{value: value}}, socket}
-  end
-
-  @impl true
-  def handle_in("decrement", _params, socket) do
-    {:ok, value} = Game.decrement(socket.assigns.game_id)
-    {:reply, {:ok, %{value: value}}, socket}
-  end
-
-  @impl true
-  def handle_in("reset", _params, socket) do
-    {:ok, value} = Game.reset(socket.assigns.game_id)
-    {:reply, {:ok, %{value: value}}, socket}
   end
 
   @impl true
@@ -235,13 +214,6 @@ defmodule CountryguessrWeb.GameChannel do
   @impl true
   def handle_info({:player_eliminated, player_id}, socket) do
     push(socket, "player_eliminated", %{player_id: player_id})
-    {:noreply, socket}
-  end
-
-  # Legacy counter update
-  @impl true
-  def handle_info({:game_updated, _game_id, value}, socket) do
-    push(socket, "updated", %{value: value})
     {:noreply, socket}
   end
 

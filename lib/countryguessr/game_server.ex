@@ -104,40 +104,6 @@ defmodule Countryguessr.GameServer do
     GenServer.call(pid, {:end_game, player_id})
   end
 
-  # --- Legacy API for backwards compatibility ---
-
-  @doc """
-  Gets the current game value (legacy counter API).
-  """
-  @spec get(pid()) :: integer()
-  def get(pid) do
-    GenServer.call(pid, :get)
-  end
-
-  @doc """
-  Increments the game and returns the new value (legacy).
-  """
-  @spec increment(pid()) :: integer()
-  def increment(pid) do
-    GenServer.call(pid, :increment)
-  end
-
-  @doc """
-  Decrements the game and returns the new value (legacy).
-  """
-  @spec decrement(pid()) :: integer()
-  def decrement(pid) do
-    GenServer.call(pid, :decrement)
-  end
-
-  @doc """
-  Resets the game to 0 and returns 0 (legacy).
-  """
-  @spec reset(pid()) :: integer()
-  def reset(pid) do
-    GenServer.call(pid, :reset)
-  end
-
   # --- Server Callbacks ---
 
   @impl true
@@ -154,9 +120,7 @@ defmodule Countryguessr.GameServer do
       started_at: nil,
       ended_at: nil,
       time_remaining: div(@game_duration, 1000),
-      timer_ref: nil,
-      # Legacy counter value for backwards compatibility
-      value: 0
+      timer_ref: nil
     }
 
     {:ok, state, @idle_timeout}
@@ -381,36 +345,6 @@ defmodule Countryguessr.GameServer do
     end
   end
 
-  # --- Legacy Counter Handlers (for backwards compatibility) ---
-
-  @impl true
-  def handle_call(:get, _from, state) do
-    {:reply, state.value, state, @idle_timeout}
-  end
-
-  @impl true
-  def handle_call(:increment, _from, state) do
-    new_value = state.value + 1
-    new_state = %{state | value: new_value}
-    broadcast_update(state.game_id, new_value)
-    {:reply, new_value, new_state, @idle_timeout}
-  end
-
-  @impl true
-  def handle_call(:decrement, _from, state) do
-    new_value = state.value - 1
-    new_state = %{state | value: new_value}
-    broadcast_update(state.game_id, new_value)
-    {:reply, new_value, new_state, @idle_timeout}
-  end
-
-  @impl true
-  def handle_call(:reset, _from, state) do
-    new_state = %{state | value: 0}
-    broadcast_update(state.game_id, 0)
-    {:reply, 0, new_state, @idle_timeout}
-  end
-
   # --- Timer and Timeout Handlers ---
 
   @impl true
@@ -530,14 +464,6 @@ defmodule Countryguessr.GameServer do
   end
 
   # --- Broadcasts ---
-
-  defp broadcast_update(game_id, value) do
-    Phoenix.PubSub.broadcast(
-      Countryguessr.PubSub,
-      "game:#{game_id}",
-      {:game_updated, game_id, value}
-    )
-  end
 
   defp broadcast_player_joined(game_id, player_id, nickname, is_host) do
     Phoenix.PubSub.broadcast(
