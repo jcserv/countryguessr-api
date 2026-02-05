@@ -166,7 +166,10 @@ defmodule Countryguessr.GameTest do
       assert {:error, :already_claimed} = Game.claim_country(game_id, "player-2", "US")
     end
 
-    test "allows different players to claim different countries", %{game_id: game_id, host_id: host_id} do
+    test "allows different players to claim different countries", %{
+      game_id: game_id,
+      host_id: host_id
+    } do
       {:ok, _} = Game.claim_country(game_id, host_id, "US")
       {:ok, result} = Game.claim_country(game_id, "player-2", "FR")
 

@@ -64,7 +64,11 @@ defmodule Countryguessr.RateLimiterTest do
 
       # Exhaust the limit
       for _ <- 1..3 do
-        assert :ok = RateLimiter.check(player_id, :claim_country, max_requests: 3, window_ms: window_ms)
+        assert :ok =
+                 RateLimiter.check(player_id, :claim_country,
+                   max_requests: 3,
+                   window_ms: window_ms
+                 )
       end
 
       assert {:error, :rate_limited} =
@@ -74,7 +78,8 @@ defmodule Countryguessr.RateLimiterTest do
       Process.sleep(window_ms + 10)
 
       # Should be allowed again
-      assert :ok = RateLimiter.check(player_id, :claim_country, max_requests: 3, window_ms: window_ms)
+      assert :ok =
+               RateLimiter.check(player_id, :claim_country, max_requests: 3, window_ms: window_ms)
     end
 
     test "tracks different actions separately" do
@@ -100,7 +105,8 @@ defmodule Countryguessr.RateLimiterTest do
         assert :ok = RateLimiter.check(player_a, :claim_country, max_requests: 3)
       end
 
-      assert {:error, :rate_limited} = RateLimiter.check(player_a, :claim_country, max_requests: 3)
+      assert {:error, :rate_limited} =
+               RateLimiter.check(player_a, :claim_country, max_requests: 3)
 
       # Player B should still be allowed
       assert :ok = RateLimiter.check(player_b, :claim_country, max_requests: 3)
@@ -141,7 +147,9 @@ defmodule Countryguessr.RateLimiterTest do
 
       # Player A should be allowed, B should still be limited
       assert :ok = RateLimiter.check(player_a, :claim_country, max_requests: 3)
-      assert {:error, :rate_limited} = RateLimiter.check(player_b, :claim_country, max_requests: 3)
+
+      assert {:error, :rate_limited} =
+               RateLimiter.check(player_b, :claim_country, max_requests: 3)
     end
   end
 
