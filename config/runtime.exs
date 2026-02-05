@@ -14,20 +14,21 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
+  # CORS and WebSocket origins in production
+  allowed_origins =
+    case System.get_env("CORS_ORIGINS") do
+      nil -> ["https://#{host}"]
+      origins -> String.split(origins, ",")
+    end
+
   config :countryguessr, CountryguessrWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    secret_key_base: secret_key_base
-
-  # CORS in production - configure allowed origins
-  allowed_origins =
-    case System.get_env("CORS_ORIGINS") do
-      nil -> ["https://#{host}"]
-      origins -> String.split(origins, ",")
-    end
+    secret_key_base: secret_key_base,
+    check_origin: allowed_origins
 
   config :cors_plug,
     origin: allowed_origins,
