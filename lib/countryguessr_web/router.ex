@@ -9,5 +9,4 @@ defmodule CountryguessrWeb.Router do
 
   # Health check - no pipeline needed
   get "/health", CountryguessrWeb.HealthController, :index
-
 end
