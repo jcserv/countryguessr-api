@@ -320,5 +320,4 @@ defmodule CountryguessrWeb.GameChannelTest do
       assert_reply ref, :error, %{reason: :unknown_event}
     end
   end
-
 end
