@@ -1,8 +1,7 @@
 import Config
 
 # Production config - most settings come from runtime.exs
-config :countryguessr, CountryguessrWeb.Endpoint,
-  server: true
+config :countryguessr, CountryguessrWeb.Endpoint, server: true
 
 # Production logging
 config :logger, level: :info
